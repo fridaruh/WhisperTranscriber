@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-from utils import process_audio, is_valid_audio_file, get_supported_languages
+from utils import process_audio, is_valid_audio_file, get_supported_languages, export_transcription
 from styles import apply_custom_styles
 import time
 
@@ -25,6 +25,8 @@ def main():
         st.session_state.processing = False
     if 'detected_language' not in st.session_state:
         st.session_state.detected_language = None
+    if 'original_filename' not in st.session_state:
+        st.session_state.original_filename = None
 
     # File upload section
     st.markdown("### Upload Audio File")
@@ -49,6 +51,9 @@ def main():
         if not is_valid_audio_file(uploaded_file):
             st.error("Please upload a valid audio file under 25MB")
             return
+
+        # Store original filename in session state
+        st.session_state.original_filename = uploaded_file.name
 
         if not st.session_state.processing and not st.session_state.transcription:
             if st.button("Transcribe Audio", type="primary"):
@@ -79,18 +84,40 @@ def main():
             st.markdown("---")
             st.markdown(st.session_state.transcription)
             
-            # Download button for transcription
-            st.download_button(
-                label="Download Transcription",
-                data=st.session_state.transcription,
-                file_name="transcription.txt",
-                mime="text/plain"
+            # Export options
+            st.markdown("### Export Options")
+            export_format = st.selectbox(
+                "Select export format",
+                options=['txt', 'json', 'csv'],
+                format_func=lambda x: x.upper(),
+                help="Choose the format for your transcription export"
             )
+            
+            # Generate export content
+            try:
+                content, filename, mime_type = export_transcription(
+                    st.session_state.transcription,
+                    st.session_state.detected_language,
+                    st.session_state.original_filename,
+                    export_format
+                )
+                
+                # Download button for transcription
+                st.download_button(
+                    label=f"Download Transcription as {export_format.upper()}",
+                    data=content,
+                    file_name=filename,
+                    mime=mime_type,
+                    help=f"Download your transcription in {export_format.upper()} format"
+                )
+            except Exception as e:
+                st.error(f"Error preparing export: {str(e)}")
 
             # Reset button
             if st.button("Clear and Start Over"):
                 st.session_state.transcription = None
                 st.session_state.detected_language = None
+                st.session_state.original_filename = None
                 st.experimental_rerun()
 
     # Information section
@@ -104,7 +131,7 @@ def main():
         - Automatic language detection
         - Support for multiple languages
         - Accurate transcription powered by OpenAI
-        - Download transcription as text file
+        - Export transcription in multiple formats (TXT, JSON, CSV)
         
         **Note:** The processing time depends on the length of your audio file.
         """)

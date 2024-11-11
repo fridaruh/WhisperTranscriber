@@ -1,5 +1,9 @@
 import os
 import tempfile
+import json
+import csv
+from io import StringIO
+from datetime import datetime
 from openai import OpenAI
 import streamlit as st
 
@@ -77,3 +81,49 @@ def process_audio(uploaded_file, language='auto'):
         if 'tmp_file_path' in locals():
             os.unlink(tmp_file_path)
         raise Exception(f"Transcription failed: {str(e)}")
+
+def export_transcription(transcription_text, detected_language, original_filename, export_format='txt'):
+    """
+    Export transcription in various formats
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    languages = get_supported_languages()
+    language_name = languages.get(detected_language, detected_language)
+    
+    metadata = {
+        "timestamp": timestamp,
+        "original_file": original_filename,
+        "detected_language": language_name
+    }
+    
+    if export_format == 'txt':
+        content = f"""Audio Transcription
+Generated: {metadata['timestamp']}
+Original File: {metadata['original_file']}
+Detected Language: {metadata['detected_language']}
+
+--- Transcript ---
+{transcription_text}
+"""
+        return content, f"transcription_{timestamp}.txt", "text/plain"
+    
+    elif export_format == 'json':
+        content = json.dumps({
+            "metadata": metadata,
+            "transcription": transcription_text
+        }, indent=2)
+        return content, f"transcription_{timestamp}.json", "application/json"
+    
+    elif export_format == 'csv':
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Field', 'Value'])
+        writer.writerow(['Timestamp', metadata['timestamp']])
+        writer.writerow(['Original File', metadata['original_file']])
+        writer.writerow(['Detected Language', metadata['detected_language']])
+        writer.writerow(['Transcription', transcription_text])
+        content = output.getvalue()
+        return content, f"transcription_{timestamp}.csv", "text/csv"
+    
+    else:
+        raise ValueError(f"Unsupported export format: {export_format}")
