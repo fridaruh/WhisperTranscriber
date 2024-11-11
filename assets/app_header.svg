@@ -1,0 +1,7 @@
+<svg width="200" height="50" xmlns="http://www.w3.org/2000/svg">
+    <rect width="200" height="50" fill="#FF4B4B" rx="5"/>
+    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Arial" font-size="20">
+        Audio Transcriber
+    </text>
+    <path d="M30,15 L30,35 M20,20 L20,30 M40,10 L40,40" stroke="white" stroke-width="2"/>
+</svg>
