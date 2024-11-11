@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-from utils import process_audio, is_valid_audio_file
+from utils import process_audio, is_valid_audio_file, get_supported_languages
 from styles import apply_custom_styles
 import time
 
@@ -23,6 +23,8 @@ def main():
         st.session_state.transcription = None
     if 'processing' not in st.session_state:
         st.session_state.processing = False
+    if 'detected_language' not in st.session_state:
+        st.session_state.detected_language = None
 
     # File upload section
     st.markdown("### Upload Audio File")
@@ -32,6 +34,15 @@ def main():
         "Choose an audio file",
         type=["mp3", "wav", "m4a"],
         help="Maximum file size: 25MB"
+    )
+
+    # Language selection
+    languages = get_supported_languages()
+    selected_language = st.selectbox(
+        "Select language (or auto-detect)",
+        options=list(languages.keys()),
+        format_func=lambda x: languages[x],
+        index=0
     )
 
     if uploaded_file:
@@ -47,8 +58,9 @@ def main():
                 with st.spinner("Processing your audio file..."):
                     try:
                         # Process the audio file
-                        transcription = process_audio(uploaded_file)
-                        st.session_state.transcription = transcription
+                        result = process_audio(uploaded_file, selected_language)
+                        st.session_state.transcription = result['text']
+                        st.session_state.detected_language = result['detected_language']
                         st.session_state.processing = False
                     except Exception as e:
                         st.error(f"An error occurred during transcription: {str(e)}")
@@ -58,6 +70,12 @@ def main():
         # Display transcription results
         if st.session_state.transcription:
             st.markdown("### Transcription Result")
+            
+            # Display detected language
+            if st.session_state.detected_language:
+                detected_lang_name = languages.get(st.session_state.detected_language, st.session_state.detected_language)
+                st.info(f"🌐 Detected Language: {detected_lang_name}")
+            
             st.markdown("---")
             st.markdown(st.session_state.transcription)
             
@@ -72,6 +90,7 @@ def main():
             # Reset button
             if st.button("Clear and Start Over"):
                 st.session_state.transcription = None
+                st.session_state.detected_language = None
                 st.experimental_rerun()
 
     # Information section
@@ -82,6 +101,8 @@ def main():
         **Features:**
         - Supports MP3, WAV, and M4A audio formats
         - Maximum file size: 25MB
+        - Automatic language detection
+        - Support for multiple languages
         - Accurate transcription powered by OpenAI
         - Download transcription as text file
         

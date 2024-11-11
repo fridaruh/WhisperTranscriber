@@ -20,7 +20,28 @@ def is_valid_audio_file(uploaded_file):
     
     return True
 
-def process_audio(uploaded_file):
+def get_supported_languages():
+    """
+    Return a dictionary of supported languages
+    """
+    return {
+        'auto': 'Auto-detect',
+        'en': 'English',
+        'es': 'Spanish',
+        'fr': 'French',
+        'de': 'German',
+        'it': 'Italian',
+        'pt': 'Portuguese',
+        'nl': 'Dutch',
+        'ja': 'Japanese',
+        'ko': 'Korean',
+        'zh': 'Chinese',
+        'ar': 'Arabic',
+        'ru': 'Russian',
+        'hi': 'Hindi'
+    }
+
+def process_audio(uploaded_file, language='auto'):
     """
     Process the audio file using OpenAI's Whisper API
     """
@@ -35,16 +56,21 @@ def process_audio(uploaded_file):
 
         # Open and transcribe the audio file
         with open(tmp_file_path, 'rb') as audio_file:
+            # If language is set to auto, let Whisper detect it
             transcription = client.audio.transcriptions.create(
                 model="whisper-1",
                 file=audio_file,
-                response_format="text"
+                response_format="verbose_json",  # Changed to get language info
+                language=None if language == 'auto' else language
             )
 
         # Clean up the temporary file
         os.unlink(tmp_file_path)
 
-        return transcription
+        return {
+            'text': transcription.text,
+            'detected_language': transcription.language
+        }
 
     except Exception as e:
         # Clean up the temporary file in case of error
